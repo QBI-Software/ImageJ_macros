@@ -1,6 +1,6 @@
 /*
  * Macro to process multiple sequences of images in a directory into hyperstacks grouped by matching filename 
- * NB Single channel only - use batchCreateHyperstackChannels for multiple channgels
+ * Modified for use with multiple channels - note that in the test data, the order was initially incorrect - this may not always be the case.
  * Usage Steps:
  * 1. Select input files directory
  * 2. Select output directory
@@ -67,7 +67,7 @@ function processFolder(suffix, input) {
 
 //If problems with base filename - uncomment print statements to debug
 function getRootFilename(suffix, fname){
-	print("Filename:" + fname);
+	//print("Filename:" + fname);
 	idx = lastIndexOf(fname, suffix);
 	if (idx < 0){
 		exit("Error: Problem with filenames")
@@ -81,7 +81,34 @@ function getRootFilename(suffix, fname){
 function processStack(inputdir,input, output, file) {
 	outputfile = output + "Stack_" + file + ".tif";
 	print("Processing: " + input.length + " files");
-	run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files view=Hyperstack stack_order=XYCZT use_virtual_stack axis_1_number_of_images=3 axis_1_axis_first_image=1 axis_1_axis_increment=1 axis_2_number_of_images=3 axis_2_axis_first_image=1 axis_2_axis_increment=1 axis_3_number_of_images=" + input.length + " axis_3_axis_first_image=1 axis_3_axis_increment=1 use_virtual_stack contains=[" + file + "] name=[]");
+	bfname = inputdir + file + "_z00<1-" + input.length + ">.tif";
+	run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=9 c_1=3 t_1=1 contains=[" + file + "] name=[" + bfname + "]");
+	// Adjust brightness and color channels
+	setBatchMode(true);
+	if (Stack.isHyperStack){
+      print("Stack is HyperStack: Adjusting color");
+      //print("Get Dimensions");
+      getDimensions(w, h, channels, slices, frames);
+      for (t=1; t<=frames; t++) {
+	     for (z=1; z<=slices; z++) {
+	        for (c=1; c<=channels; c++) {
+	           Stack.setPosition(c, z, t);
+	           run("Enhance Contrast", "saturated=0.35");
+	           if (c == 1){
+	           	run("Red");
+	           }else if (c == 2){
+	           	run("Green");
+	           }else{
+	           	run("Blue");
+	           }
+	           
+	           wait(20);
+	        }
+	     }
+      }
+      Stack.setPosition(1, 1, 1);	
+	  setBatchMode(false);
+	}
 	saveAs("tiff", outputfile);
 	close();
 	print("Saved to: " + outputfile);
