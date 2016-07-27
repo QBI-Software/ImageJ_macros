@@ -38,7 +38,7 @@ function processFolder(suffix, input) {
 		if (!File.isDirectory(input + list[i])){
 			if ((lengthOf(filename) > 0) && startsWith(list[i], filename)){
 				j++;
-				stacklist[j]= input + list[i];
+				stacklist[j]= list[i];
 				
 			} else {
 				if (j > 0) {
@@ -49,7 +49,7 @@ function processFolder(suffix, input) {
 				}
 				filename = getRootFilename(suffix, list[i]);
 				j = 0;				
-				stacklist[j]= input + list[i];
+				stacklist[j]= list[i];
 			}
 			//showProgress(i, list.length);
 		}else{
@@ -78,11 +78,40 @@ function getRootFilename(suffix, fname){
 	return rootfname;
 }
 
+//Use Image Sequence instead - stack with single dimension only
 function processStack(inputdir,input, output, file) {
 	outputfile = output + "Stack_" + file + ".tif";
 	print("Processing: " + input.length + " files");
-	run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files view=Hyperstack stack_order=XYCZT use_virtual_stack axis_1_number_of_images=3 axis_1_axis_first_image=1 axis_1_axis_increment=1 axis_2_number_of_images=3 axis_2_axis_first_image=1 axis_2_axis_increment=1 axis_3_number_of_images=" + input.length + " axis_3_axis_first_image=1 axis_3_axis_increment=1 use_virtual_stack contains=[" + file + "] name=[]");
+	run("Image Sequence...", "open=[" + inputdir + input[0] + "] file=" + file + " sort use");	
 	saveAs("tiff", outputfile);
-	close();
-	print("Saved to: " + outputfile);
+ 	close();
+ 	print("Saved to: " + outputfile);
+ 	
+
 }
+/*
+//Copy files to temp directory as bug in Bioformats ignores filename matching but can't delete opened file - so fails again
+function processStack1(inputdir,input, output, file) {
+	outputfile = output + "Stack_" + file + ".tif";
+	print("Processing: " + input.length + " files");
+	
+	temp = output + "temp";
+	File.makeDirectory(temp);
+	for (i=0; i< input.length; i++){
+		File.copy(inputdir + input[i], temp + "\\" + input[i]);
+	}
+	print(temp + "\\" + input[0]);
+	//run("Bio-Formats", "open=[" + temp + "\\" + input[0] + "] color_mode=Default group_files view=Hyperstack stack_order=XYCZT use_virtual_stack contains=[" + file + "]");
+	run("Image Sequence...", "open=[" + temp + "\\" + input[0] + "] file=" + file + " sort use");
+	
+	saveAs("tiff", outputfile);
+ 	close();
+ 	print("Saved to: " + outputfile);
+ 	//Remove temp dir
+ 	for (i=0; i < input.length; i++){
+		File.delete(temp + "\\" + input[i]);
+	}
+ 	File.delete(temp);
+
+}
+*/
