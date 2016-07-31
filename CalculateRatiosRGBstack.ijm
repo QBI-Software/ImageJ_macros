@@ -215,6 +215,14 @@ string =  title + rtn + "Filename=" + name +
 	rtn + "SOMA External/Total=" + ratio4 + 
 	rtn + "DENDRITES Internal/External=" + ratio5 + 
 	rtn + "DENDRITES External/Total=" + ratio6;
+print(string);	
+string = title + rtn + "Filename=" + name + 
+	rtn + "Analysis complete - Files saved:" + 
+	rtn + "\tTif converted image" +
+	rtn + "\tROIs zip" +
+	rtn + "\tParticle analysis of soma" +
+	rtn + "\tParticle analysis of whole cell" + 
+	rtn + "\tSummary table of ratios";
 print(string);
 
 width=512; height=512;

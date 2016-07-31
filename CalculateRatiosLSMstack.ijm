@@ -214,6 +214,7 @@ function createNeuronMask(basefilename){
 	//enhance
 	run("Window/Level...");
 	run("Enhance Contrast", "saturated=0.35");
+	run("Make Composite", "display=Color"); //collapse channels
 	//make binary
 	run("Options...", "iterations=1 count=1 black do=Nothing");
 	run("Remove Outliers...", "radius=1 threshold=50 which=Bright stack");
@@ -251,10 +252,10 @@ function analyseNeuron(tiff, basefilename){
 	imageCalculator("Multiply create stack", edges, tifname);
 	print("Running image calculator");
 	//Assumes masked stack open
-	run("Set Measurements...", "area area_fraction stack limit display nan redirect=None decimal=3");
+	run("Set Measurements...", "area area_fraction mean integrated median stack limit display nan redirect=None decimal=3");
 	run("Analyze Particles...", "pixel show=Overlay display clear include summarize in_situ stack");
 	updateResults();
-
+	//TODO: COMPARE TO roiManager("Measure");
 	//Calculate Ratios from Results
 	lines = split(getInfo(), "\n");
 	print("Summarizing Results:"+lines.length);
