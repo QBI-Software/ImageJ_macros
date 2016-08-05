@@ -18,22 +18,35 @@ output = getDirectory("Output directory");
 Dialog.create("Base filename ends at");
 suffix = "_z";
 Dialog.addString("File suffix: ", suffix, 5);
+Dialog.addCheckbox("SnakeTile numbering", 0);
+Dialog.addCheckbox("Adjust threshold", 0);
 Dialog.show();
 suffix = Dialog.getString();
+snt = Dialog.getCheckbox();
+print("Snaketile:" + snt);
+adjust = Dialog.getCheckbox();
+print("Adjust threshold: " + adjust);
 start=0;
 
 
-processFolder(suffix, input);
+processFolder(suffix, snt, adjust, input);
 exit("Finished");
 
-function processFolder(suffix, input) {
+function processFolder(suffix, snt, adjust, input) {
     print("Starting folder processing: " + input);
 	list = getFileList(input);
 	print("Total entries in directory:" + list.length);
+	if (snt){
+		snaketiles = getSnakeTileList(list);
+	}else{
+		snaketiles = newArray();
+	}
 	stacklist = newArray(list.length); //initial stack
-	j = 0; //added counter
+	j = 0; //counter per list
+	n = 0; //count of hyperstacks
 	l = 0; //cumulative list size ie already processed
 	filename = "";
+	outfilename = "";
 	for (i = 0; i < list.length; i++) {
 		if (!File.isDirectory(input + list[i])){
 			if ((lengthOf(filename) > 0) && startsWith(list[i], filename)){
@@ -43,7 +56,13 @@ function processFolder(suffix, input) {
 			} else {
 				if (j > 0) {
 					stacklist = Array.slice(stacklist, 0, j+1);
-					processStack(input,stacklist, output, filename);
+					if (snaketiles.length > 0){
+						outfilename = snaketiles[n];
+						print("Setting filename from: " + filename + " to " + outfilename);
+						n=n++;
+					}
+					processStack(input, stacklist, output, filename, outfilename, adjust);
+					
 					l += stacklist.length;
 					stacklist = newArray(list.length - l);
 				}
@@ -53,14 +72,18 @@ function processFolder(suffix, input) {
 			}
 			//showProgress(i, list.length);
 		}else{
-			print("File is directory");
+			//print("File is directory");
 		}
 	}
 	//last one
 	if (stacklist.length > 0){
 		stacklist = Array.slice(stacklist, 0, j+1);
 		//print("Last stack: " + stacklist.length);
-		processStack(input,stacklist, output, filename);
+		if (snaketiles.length > 0){
+			outfilename = snaketiles[n];
+			print("Setting filename from: " + filename + " to " + outfilename);
+		}
+		processStack(input, stacklist, output, filename, outfilename, adjust);
 	}
 }
 
@@ -78,37 +101,159 @@ function getRootFilename(suffix, fname){
 	return rootfname;
 }
 
-function processStack(inputdir,input, output, file) {
-	outputfile = output + "Stack_" + file + ".tif";
+function getRegex(){
+	re = "tile_x0+([0-9])_y0+([0-9]).*";
+	return re;
+}
+
+function getFirstFile(list){
+	firstfile="";
+	re = getRegex();
+	//assumes last file has total rows, cols
+	for (i = 0; i < list.length; i++) {
+		if (matches(list[i],re)){
+			lastfile = list[i];
+			print("First filename:" + firstfile);
+			idx = i;
+			i = list.length; //break
+			
+		}
+	}
+	return firstfile;
+}
+
+function getLastFile(list){
+	lastfile="";
+	re = getRegex();
+	//assumes last file has total rows, cols
+	for (i = list.length - 1; i > 0; i--) {
+		if (matches(list[i],re)){
+			lastfile = list[i];
+			print("Last filename:" + lastfile);
+			idx = i;
+			i = 0; //break
+			
+		}
+	}
+	return lastfile;
+}
+
+function hasMultipleChannels(filepath,list){
+	rtn = 0;
+	firstfile = getFirstFile(list);
+	open(filepath + firstfile);
+	Stack.getDimensions(width, height, channels, slices, frames);
+	print("Channels: " + channels + " Slices: " + slices + " Frames: " + frames);
+	if (channels > 1){
+		rtn = 1;
+	}
+	close();
+	return rtn;
+}
+/* Snake tile numbering
+x001_y001, x002_y001, x003_y001
+x001_y002, x002_y002, x003_y002
+x001_y003, x002_y003, x003_y003
+=
+Tile001, Tile002, Tile003
+Tile006, Tile005, Tile004
+Tile007, Tile008, Tile009.
+*/
+function getSnakeTileList(list){
+	outlist = newArray();
+	x=0;
+	y=0;
+	lastfile=getLastFile(list);
+	
+	if(lengthOf(lastfile) > 0){
+		parts=split(lastfile, "_"); 
+		for (j=0; j<parts.length; j++){
+			//print(parts[j]);
+			if (startsWith(parts[j], "x")){
+				x1 = parseInt(substring(parts[j], 1));
+				if (x1 > x){
+					x = x1;
+					//print("x=" + x);
+				}			
+			}
+			if (startsWith(parts[j], "y")){
+				y1 = parseInt(substring(parts[j], 1));
+				if (y1 > y){
+					y = y1;
+					//print("y=" + y);
+				}
+			}
+		}
+		//determine number rows & columns
+		print("Rows= " + x + " Cols=" + y);
+		//generate numbers
+		outlist = newArray(x*y);
+		odd = 0;
+		ctr=x;
+		for (k=0; k < outlist.length; k++){
+			if (k%x == 0){
+				odd = !odd; //toggle
+				ctr = k; 
+			}
+			if(odd){
+				outlist[k] = "Tile" + leftPad(k+1,3);
+			}else{
+				num = ctr+x-(k%x);
+				outlist[k] = "Tile" + leftPad(num,3);
+			}
+			
+		}
+		Array.show(outlist);
+	}else{
+		print("Unexpected filename format - unable to use Snake Tile Numbering");
+	}
+	return outlist;
+	
+}
+
+function leftPad(n, width) {
+  s =""+n;
+  while (lengthOf(s)<width){
+      s = "0"+s;
+  }
+  return s;
+}
+
+//Create Hyperstack from list
+function processStack(inputdir,input, output, file, outfilename, adjust) {
+	/*Set output filename*/
+	if (lengthOf(outfilename) > 0){
+		outputfile = output + outfilename + ".tif";
+	}else{
+		outputfile = output + file + ".tif";
+	}
 	print("Processing: " + input.length + " files");
-	bfname = inputdir + file + "_z00<1-" + input.length + ">.tif";
-	run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=9 c_1=3 t_1=1 contains=[" + file + "] name=[" + bfname + "]");
-	// Adjust brightness and color channels
-	setBatchMode(true);
-	if (Stack.isHyperStack){
-      print("Stack is HyperStack: Adjusting color");
-      //print("Get Dimensions");
+	if (hasMultipleChannels(inputdir, input)){
+		print("Multiple channels - using Bio-formats");
+		bfname = inputdir + file + "_z00<1-" + input.length + ">.tif";
+		run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=9 c_1=3 t_1=1 contains=[" + file + "] name=[" + bfname + "]");
+	}else{
+		print("Single channels - using Image sequence");
+		run("Image Sequence...", "open=[" + inputdir + input[0] + "] file=" + file + " sort use");
+	}
+	/* Adjust brightness and color channels*/
+	if (adjust && Stack.isHyperStack){
+	  setBatchMode(true);
+      print("Stack is HyperStack: Adjusting contrast");
       getDimensions(w, h, channels, slices, frames);
       for (t=1; t<=frames; t++) {
 	     for (z=1; z<=slices; z++) {
 	        for (c=1; c<=channels; c++) {
 	           Stack.setPosition(c, z, t);
 	           run("Enhance Contrast", "saturated=0.35");
-	           if (c == 1){
-	           	run("Red");
-	           }else if (c == 2){
-	           	run("Green");
-	           }else{
-	           	run("Blue");
-	           }
-	           
-	           wait(20);
 	        }
 	     }
       }
-      Stack.setPosition(1, 1, 1);	
+      	
 	  setBatchMode(false);
+	  Stack.setPosition(1, 1, 1);
 	}
+	
 	saveAs("tiff", outputfile);
 	close();
 	print("Saved to: " + outputfile);
