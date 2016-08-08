@@ -268,6 +268,17 @@ function analyseSoma(tiff){
 	roiManager("Select",0);
 	print("select ROI: " + Roi.getName);
 	setAutoThreshold("Default dark stack");
+	getThreshold(lower, upper);
+	/*
+    if (mode =="dark")
+       lower = lower/factor;
+    else {
+       upper = upper*factor;
+       if (upper>255) upper=255;
+    }
+    */
+    setThreshold(lower, upper);
+    print("Threshold: " + lower + " to " + upper);
 	//setThreshold(79, 255); //?too specific
 	run("Analyze Particles...", "show=Overlay display clear include summarize in_situ stack");
 	updateResults();
