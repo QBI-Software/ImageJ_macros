@@ -1,4 +1,4 @@
-/*
+/* Title: batchCreateHyperstackChannels
  * Macro to process multiple sequences of images in a directory into hyperstacks grouped by matching filename 
  * Modified for use with multiple channels - note that in the test data, the order was initially incorrect - this may not always be the case.
  * Usage Steps:
@@ -8,6 +8,13 @@
  *   (ie it will truncate at this - case-sensitive, eg "_z")
  * 4. Hyperstack files will be written to output directory
  * 5. Troubleshooting: Check Log output window in ImageJ
+ * 
+ * Modifications:
+ * 1. Added option for Snake Tile numbering (see comments below) - filename format is crucial!
+ * 2. Added option to use thresholding
+ * 3. Removed colorization of channels
+ * 4. Merged single channels with autodetection of number of channels
+ * 
  * (Contact: Liz Cooper-Williams, QBI e.cooperwilliams@uq.edu.au)
  */
 requires("1.51d");
@@ -59,7 +66,7 @@ function processFolder(suffix, snt, adjust, input) {
 					if (snaketiles.length > 0){
 						outfilename = snaketiles[n];
 						print("Setting filename from: " + filename + " to " + outfilename);
-						n=n++;
+						n++;
 					}
 					processStack(input, stacklist, output, filename, outfilename, adjust);
 					
@@ -203,7 +210,9 @@ function getSnakeTileList(list){
 			}
 			
 		}
-		Array.show(outlist);
+		snaketilelist= transpose(y, outlist);
+		//Reorder to reflect alphanumeric sorted filenames 
+		Array.show(snaketilelist);
 	}else{
 		print("Unexpected filename format - unable to use Snake Tile Numbering");
 	}
@@ -211,6 +220,21 @@ function getSnakeTileList(list){
 	
 }
 
+
+function transpose(cols, outlist){
+	sorted = newArray(outlist.length);
+
+	c=0;
+	for (i=0; i < cols; i++){
+		for (k=0; k < outlist.length; k=k+cols){
+			sorted[c] = outlist[k+i];
+			//print("k="+k + " i=" +i + " k+i=" + k+i);
+			c++;
+		}
+	}
+	//Array.show(sorted);
+	return sorted;
+}
 function leftPad(n, width) {
   s =""+n;
   while (lengthOf(s)<width){
@@ -234,7 +258,8 @@ function processStack(inputdir,input, output, file, outfilename, adjust) {
 		run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=9 c_1=3 t_1=1 contains=[" + file + "] name=[" + bfname + "]");
 	}else{
 		print("Single channels - using Image sequence");
-		run("Image Sequence...", "open=[" + inputdir + input[0] + "] file=" + file + " sort use");
+		print("Input:" + input[0] + " Matching: " + file);
+		run("Image Sequence...", "open=[" + input[0] + "] file=" + file + " sort use");
 	}
 	/* Adjust brightness and color channels*/
 	if (adjust && Stack.isHyperStack){
