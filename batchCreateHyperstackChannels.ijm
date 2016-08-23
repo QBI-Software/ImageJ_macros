@@ -216,7 +216,7 @@ function getSnakeTileList(list){
 	}else{
 		print("Unexpected filename format - unable to use Snake Tile Numbering");
 	}
-	return outlist;
+	return snaketilelist;
 	
 }
 
