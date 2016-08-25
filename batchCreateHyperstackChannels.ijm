@@ -43,6 +43,7 @@ function processFolder(suffix, snt, adjust, input) {
     print("Starting folder processing: " + input);
 	list = getFileList(input);
 	print("Total entries in directory:" + list.length);
+	multi = hasMultipleChannels(input);
 	if (snt){
 		snaketiles = getSnakeTileList(list);
 	}else{
@@ -68,7 +69,7 @@ function processFolder(suffix, snt, adjust, input) {
 						print("Setting filename from: " + filename + " to " + outfilename);
 						n++;
 					}
-					processStack(input, stacklist, output, filename, outfilename, adjust);
+					processStack(input, stacklist, output, filename, outfilename, adjust, multi);
 					
 					l += stacklist.length;
 					stacklist = newArray(list.length - l);
@@ -90,7 +91,7 @@ function processFolder(suffix, snt, adjust, input) {
 			outfilename = snaketiles[n];
 			print("Setting filename from: " + filename + " to " + outfilename);
 		}
-		processStack(input, stacklist, output, filename, outfilename, adjust);
+		processStack(input, stacklist, output, filename, outfilename, adjust, multi);
 	}
 }
 
@@ -109,21 +110,26 @@ function getRootFilename(suffix, fname){
 }
 
 function getRegex(){
-	re = "tile_x0+([0-9])_y0+([0-9]).*";
+	re = "tile_x0+([0-9])_y0+([0-9]).*$";
 	return re;
 }
 
-function getFirstFile(list){
+function getFirstFile(inputdir){
 	firstfile="";
+	list = getFileList(inputdir);
+	print("getFirstFile: list=" + list[0]);
 	re = getRegex();
 	//assumes last file has total rows, cols
 	for (i = 0; i < list.length; i++) {
+		//includes filepath
 		if (matches(list[i],re)){
-			lastfile = list[i];
+			firstfile = list[i];
 			print("First filename:" + firstfile);
-			idx = i;
+			//idx = i;
 			i = list.length; //break
 			
+		}else{
+			print("Not matched=" + list[i]);
 		}
 	}
 	return firstfile;
@@ -145,13 +151,14 @@ function getLastFile(list){
 	return lastfile;
 }
 
-function hasMultipleChannels(filepath,list){
+function hasMultipleChannels(inputdir){
 	rtn = 0;
-	firstfile = getFirstFile(list);
-	open(filepath + firstfile);
+	firstfile = getFirstFile(inputdir);
+	print("Multiplechannels: checkfile=" + inputdir + firstfile);
+	open(inputdir + firstfile);
 	Stack.getDimensions(width, height, channels, slices, frames);
 	print("Channels: " + channels + " Slices: " + slices + " Frames: " + frames);
-	if (channels > 1){
+	if (channels > 1 || slices > 1){
 		rtn = 1;
 	}
 	close();
@@ -244,7 +251,7 @@ function leftPad(n, width) {
 }
 
 //Create Hyperstack from list
-function processStack(inputdir,input, output, file, outfilename, adjust) {
+function processStack(inputdir,input, output, file, outfilename, adjust, multi) {
 	/*Set output filename*/
 	if (lengthOf(outfilename) > 0){
 		outputfile = output + outfilename + ".tif";
@@ -252,7 +259,7 @@ function processStack(inputdir,input, output, file, outfilename, adjust) {
 		outputfile = output + file + ".tif";
 	}
 	print("Processing: " + input.length + " files");
-	if (hasMultipleChannels(inputdir, input)){
+	if (multi){
 		print("Multiple channels - using Bio-formats");
 		bfname = inputdir + file + "_z00<1-" + input.length + ">.tif";
 		run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=9 c_1=3 t_1=1 contains=[" + file + "] name=[" + bfname + "]");
