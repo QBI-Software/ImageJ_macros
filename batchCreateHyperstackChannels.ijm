@@ -14,7 +14,7 @@
  * 2. Added option to use thresholding
  * 3. Removed colorization of channels
  * 4. Merged single channels with autodetection of number of channels
- * 
+ * 5. MOD Oct2016: Split multichannel images
  * (Contact: Liz Cooper-Williams, QBI e.cooperwilliams@uq.edu.au)
  */
 requires("1.51d");
@@ -150,7 +150,7 @@ function getLastFile(list){
 	}
 	return lastfile;
 }
-
+//Returns number of channels or O if not multiple
 function hasMultipleChannels(inputdir){
 	rtn = 0;
 	firstfile = getFirstFile(inputdir);
@@ -159,7 +159,11 @@ function hasMultipleChannels(inputdir){
 	Stack.getDimensions(width, height, channels, slices, frames);
 	print("Channels: " + channels + " Slices: " + slices + " Frames: " + frames);
 	if (channels > 1 || slices > 1){
-		rtn = 1;
+		if (channels > slices){
+			rtn = channels;
+		}else{
+			rtn = slices;
+		}
 	}
 	close();
 	return rtn;
@@ -250,6 +254,23 @@ function leftPad(n, width) {
   return s;
 }
 
+def runadjustments(){
+	setBatchMode(true);
+	print("Stack is HyperStack: Adjusting contrast");
+	getDimensions(w, h, channels, slices, frames);
+	for (t=1; t<=frames; t++) {
+	 for (z=1; z<=slices; z++) {
+	    for (c=1; c<=channels; c++) {
+	       Stack.setPosition(c, z, t);
+	       run("Enhance Contrast", "saturated=0.35");
+	    }
+	 }
+	}
+		
+	setBatchMode(false);
+	Stack.setPosition(1, 1, 1);
+}
+
 //Create Hyperstack from list
 function processStack(inputdir,input, output, file, outfilename, adjust, multi) {
 	/*Set output filename*/
@@ -259,34 +280,41 @@ function processStack(inputdir,input, output, file, outfilename, adjust, multi) 
 		outputfile = output + file + ".tif";
 	}
 	print("Processing: " + input.length + " files");
-	if (multi){
+	if (multi > 0){
 		print("Multiple channels - using Bio-formats");
 		bfname = inputdir + file + "_z00<1-" + input.length + ">.tif";
-		run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=9 c_1=3 t_1=1 contains=[" + file + "] name=[" + bfname + "]");
+		run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files split_channels open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=" + input.length + " c_1="+multi+" t_1=1 contains=[" + file + "] name=[" + bfname + "]");
+		/* Split channels into separate directories */
+		for (c=0; c< multi; c++) {
+			chanDir = "ch" + c;
+			print("Channeldir="+ output+chanDir);
+			if (!File.exists(output + chanDir)){
+				File.makeDirectory(output + chanDir); 
+			}
+			imageTitle=getTitle();
+			print("Image title=" + imageTitle);
+			i = lastIndexOf(imageTitle,"="); 
+			rootImageTitle = substring(imageTitle, 0, i);
+			selectWindow(rootImageTitle + "="+c);
+			outputfile = output + chanDir + File.separator + outfilename + ".tif";
+			if (adjust && Stack.isHyperStack){
+				runadjustments();
+			}
+			saveAs("tiff", outputfile);
+			close();
+			print("Saved to: " + outputfile);
+
+		}
 	}else{
 		print("Single channels - using Image sequence");
 		print("Input:" + input[0] + " Matching: " + file);
 		run("Image Sequence...", "open=[" + input[0] + "] file=" + file + " sort use");
+		if (adjust && Stack.isHyperStack){
+			runadjustments();
+		}
+		saveAs("tiff", outputfile);
+		close();
+		print("Saved to: " + outputfile);
 	}
-	/* Adjust brightness and color channels*/
-	if (adjust && Stack.isHyperStack){
-	  setBatchMode(true);
-      print("Stack is HyperStack: Adjusting contrast");
-      getDimensions(w, h, channels, slices, frames);
-      for (t=1; t<=frames; t++) {
-	     for (z=1; z<=slices; z++) {
-	        for (c=1; c<=channels; c++) {
-	           Stack.setPosition(c, z, t);
-	           run("Enhance Contrast", "saturated=0.35");
-	        }
-	     }
-      }
-      	
-	  setBatchMode(false);
-	  Stack.setPosition(1, 1, 1);
-	}
-	
-	saveAs("tiff", outputfile);
-	close();
-	print("Saved to: " + outputfile);
+
 }
