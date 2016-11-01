@@ -282,7 +282,13 @@ function processStack(inputdir,input, output, file, outfilename, adjust, multi) 
 	print("Processing: " + input.length + " files");
 	if (multi > 0){
 		print("Multiple channels - using Bio-formats");
+		/*tile_x00<1-4>_y00<1-4>_z0<01-29>.tif*/
 		bfname = inputdir + file + "_z00<1-" + input.length + ">.tif";
+		if (input.length >=10 && input.length <=99){
+			bfname = inputdir + file + "_z0<01-" + input.length + ">.tif";
+		}else if (input.length >=100){
+			bfname = inputdir + file + "_z<001-" + input.length + ">.tif";
+		}
 		run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files split_channels open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=" + input.length + " c_1="+multi+" t_1=1 contains=[" + file + "] name=[" + bfname + "]");
 		/* Split channels into separate directories */
 		for (c=0; c< multi; c++) {
