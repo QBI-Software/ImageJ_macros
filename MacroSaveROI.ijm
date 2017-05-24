@@ -34,7 +34,7 @@ basename = substring(name, 0, exti);
 print("Name:", name);
 print("Directory:", dir);
 print("Title:", title);
-
+roiManager("save", dir + basename + "_ROIset.zip");
 n = roiManager("count");
 setOption("BlackBackground", false);
 for (i=0; i< n; i++){
