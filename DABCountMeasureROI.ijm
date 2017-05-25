@@ -25,87 +25,149 @@
  *   GNU General Public License for more details. 
   */
 
-filesep = File.separator; //"/";  
-dir = getInfo("image.directory"); //getDirectory("image");
-name = getInfo("image.filename"); 
-title = getTitle(); 
-exti = indexOf(name,'.tif');
-basename = substring(name, 0, exti);
-print("Name:", name);
-print("Directory:", dir);
-print("Title:", title);
-roiManager("save", dir + basename + "_ROIset.zip");
-n = roiManager("count");
-setOption("BlackBackground", false);
-roilist = newArray(n+1);
-roilabels = newArray(n+1);
-//Config settings
-run("Set Measurements...", "area perimeter limit display nan redirect=None decimal=3");
-run("Set Scale...", "distance=1.5442 known=1 pixel=1.018 unit=micron global");
+filesep = File.separator; //"/";
+dir1 = getDirectory("Choose source directory");
+outputdir = getDirectory("Choose output directory");
+filelist = getFileList(dir1);
+setBatchMode(true);
 
-//Process ROIs (must be manually drawn and added to ROI Manager)
-for (i=0; i< n; i++){
-	run("Duplicate...", "title=&title");
-	selectWindow(title);
-	roiManager("Select", i);
-	print("clear outside ...");
-	setBackgroundColor(255,255,255); //If dark background required, change this to (0,0,0)
-	run("Clear Outside");
-	seln = getInfo("selection.name");
-	print("Selection:", seln);
-	roilist[i] = i;
-	roilabels[i] = seln;
-	roiname = basename + "_"+seln+".tif";
-	tiff = dir + filesep + roiname;
-	//print("ROI:" + tiff);
-	print("running auto crop...");
-	run("Auto Crop");	
-	print("saving as tiff:" + tiff);
-	saveAs("Tiff", tiff);
-	findDABcount(seln);
-	//run("Close");
-	selectWindow(title);
+//Batch run - if not required can comment out
+for(j=0;j<filelist.length;j++){
+	inputfile = dir1 + filelist[j];
+	if (!File.isDirectory(inputfile)){
+		if (endsWith(filelist[j], ".tif")){
+			showProgress(j+1, filelist.length);	
+			//If normal tiff file - use this: open(dir1 + filelist[j]);
+			//If tiled tiff file  - use Bioformats
+			run("Bio-Formats", "open=[" + inputfile + "] color_mode=Default group_files split_channels open_files view=Hyperstack stack_order=XYCZT use_virtual_stack contains=[] name=[" + inputfile + "]");
+			//?pause
+			//Config settings
+			setOption("BlackBackground", false);
+			run("Set Measurements...", "area perimeter limit display nan redirect=None decimal=3");
+			run("Set Scale...", "distance=1.5442 known=1 pixel=1.018 unit=micron global");
+			//will default to last opened image - channel C=2
+			processCurrentImage(outputdir);
+			//Clean up windows
+			run("Close All"); 
+		}
+	}
 }
-
-//Calculate area measurements
-//selectWindow(title);
-run("Clear Results");
-selectWindow(title);
-roiManager("select", roilist);
-roiManager("measure");
-//Generate Summary table
-createSummary();
-nameOfSummaryTable = "DABSummary";
-IJ.renameResults(nameOfSummaryTable);
-selectWindow(nameOfSummaryTable);
-saveAs("Text", dir + filesep + basename + "_" + nameOfSummaryTable + ".xls");
-//Clean up - uncomment next line for debugging
+print("\n***********************\nProgram finished\n***********************");
+//Single run with image already open - comment out if using Batch run
+//processCurrentImage(outputdir);
 //run("Close All");
 
 /****** FUNCTIONS ******/
-function createSummary(){
-	selectWindow("Summary");
-	summarylines = split(getInfo(), "\n");
-	selectWindow("Results");
-	for (i=0; i < summarylines.length -1; i++){
-		values = split(summarylines[i+1], "\t");		
-		label = getResultLabel(i);
-		print("result for " + label);
-		count = parseInt(values[1]);
-		dabarea = parseFloat(values[2]);
-		dabsize = parseFloat(values[3]);
-		area = getResult("Area",i);
-		density = count/dabarea; 			
-		percentarea = 100 * (dabarea/area); 
-		//Add to Results table
-		setResult("Count", i, count);				//count of DAB +ve cells in ROI
-		setResult("DABarea", i, dabarea);			//area of DAB +ve cells in ROI
-		setResult("Density", i, density);			//number DAB cells per unit area of ROI - um2
-		setResult("PercentArea", i, percentarea);	//percent area of ROI stained with DAB over total ROI area
-		setResult("AvgSize", i, dabsize);			//average size of DAB cell somas - um2
-		
+function processCurrentImage(outputdir){
+	dir = getInfo("image.directory"); //getDirectory("image");
+	if (lengthOf(outputdir) <=0){
+		outputdir = dir;
+	}
+	name = getInfo("image.filename"); 
+	title = getTitle(); 
+	exti = indexOf(name,'.tif');
+	basename = substring(name, 0, exti);
+	print("Name:", name);
+	print("Directory:", dir);
+	print("Title:", title);
+	roifile = dir + basename + "_ROIset.zip";
+	n = roiManager("count");
+	print("ROImanager: " + n);
+	if (!File.exists(roifile) && n > 0){
+		roiManager("save", roifile);
+	}else if(File.exists(roifile) && n <= 0){
+		roiManager("open", roifile);
+		n = roiManager("count");
+	}
+	if (n <= 0){
+		print("No ROIs found for " + name);
+		return 0;
+	}else{
+		print("ROIs loaded=" + n);
 	}
 	
+	run("Subtract Background...", "rolling=50 light");
+	roilist = newArray(n+1);
+	roilabels = newArray(n+1);
+	run("Clear Results");
+	
+	
+	selectWindow(title);
+	//Process ROIs (must be manually drawn and added to ROI Manager)
+	for (i=0; i< n; i++){
+		run("Duplicate...", "title=&title");	
+		roiManager("Select", i);
+		print("clear outside ...");
+		setBackgroundColor(255,255,255); //If dark background required, change this to (0,0,0)
+		run("Clear Outside");
+		seln = getInfo("selection.name");
+		print("Selection:", seln);
+		roilist[i] = i;
+		roilabels[i] = seln;
+		roiname = basename + "_"+seln+".tif";
+		tiff = outputdir + filesep + roiname;
+		//print("ROI:" + tiff);
+		print("running auto crop...");
+		run("Auto Crop");	
+		print("saving as tiff:" + tiff);
+		saveAs("Tiff", tiff);
+		findDABcount(seln);
+		selectWindow(title);
+	}
+	
+	//Calculate area measurements to Results table
+	//selectWindow(title);
+	run("Clear Results");
+	selectWindow(title);
+	print("ROIlist: " + roilist.length);
+	roiManager("select", roilist);
+	roiManager("measure");
+	//Generate Summary table
+	createSummary(basename);
+	nameOfSummaryTable = "DABSummary";
+	IJ.renameResults(nameOfSummaryTable);
+	selectWindow(nameOfSummaryTable);
+	saveAs("Text", outputdir + filesep + basename + "_" + nameOfSummaryTable + ".csv");
+	//Clear ROI manager - uncomment this if single mode
+	roiManager("reset");
+	//TODO: Find a way to clear the Summary table
+	//tableRef = "[" + nameOfSummaryTable + "]";
+	//print(nameOfSummaryTable,"//Clear");
+	//IJ.deleteRows(0, 7);
+}
+
+
+function createSummary(basefilename){
+	selectWindow("Summary");
+	summarylines = split(getInfo(), "\n");
+	print("Summary has lines=" + summarylines.length);
+	selectWindow("Results");
+	resultsidx = 0;
+	resultsmax = roiManager("count");
+	for (i=1; i < summarylines.length; i++){
+		values = split(summarylines[i], "\t");
+		if (startsWith(values[0],basefilename) && resultsidx < resultsmax){
+			label = getResultLabel(resultsidx);
+			print(label);
+			if (startsWith(label, basefilename)){
+				count = parseInt(values[1]);
+				dabarea = parseFloat(values[2]);
+				dabsize = parseFloat(values[3]);
+				area = getResult("Area",resultsidx);
+				density = count/dabarea; 			
+				percentarea = 100 * (dabarea/area); 
+				//Add to Results table
+				setResult("Count", resultsidx, count);				//count of DAB +ve cells in ROI
+				setResult("DABarea", resultsidx, dabarea);			//area of DAB +ve cells in ROI
+				setResult("Density", resultsidx, density);			//number DAB cells per unit area of ROI - um2
+				setResult("PercentArea", resultsidx, percentarea);	//percent area of ROI stained with DAB over total ROI area
+				setResult("AvgSize", resultsidx, dabsize);			//average size of DAB cell somas - um2
+			}
+			resultsidx += 1;
+		}
+	}
+	//ensure only ROIs results 
+	IJ.deleteRows(resultsmax,resultsmax);
 	
 }
 
