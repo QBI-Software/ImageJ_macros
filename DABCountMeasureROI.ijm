@@ -52,10 +52,12 @@ for(j=0;j<filelist.length;j++){
 		}
 	}
 }
-print("\n***********************\nProgram finished\n***********************");
+
 //Single run with image already open - comment out if using Batch run
 //processCurrentImage(outputdir);
 //run("Close All");
+print("\n***********************\nProgram finished\n***********************");
+
 
 /****** FUNCTIONS ******/
 function processCurrentImage(outputdir){
@@ -178,7 +180,7 @@ function findDABcount(tiff){
 	//Enhance image
 	run("Median...", "radius=2");
 	run("Brightness/Contrast...");
-	run("Enhance Contrast", "saturated=0.35");
+	run("Enhance Contrast", "saturated=0.35"); //NOTE: This enhances contrast amongst provided pixel data - it may give false DAB+ve
 	run("Apply LUT");
 	//Detect DAB labeling
 	setAutoThreshold("RenyiEntropy dark");
