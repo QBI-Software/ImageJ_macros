@@ -1,13 +1,23 @@
-/*  MacroSaveROI
+/*  DABCountMeasureROI
  *   This macro extracts one or more ROIs from an image and saves it as filename_<ROIname>.tiff
  *   Developed for QBI
  *   
- *   Steps: 1. Open original image (directly or via Import->Bioformats)
- *          2. Select required image (if multiple channels)
- *          3. Draw ROIs and add to ROI manager (T opens the ROI manager then click Add)
- *          4. Rename ROIs to make clear which selection is which (eg Rhippocampus for right hippocampus) using "Rename" in ROI Manager
- *          5. Run this macro:
- *          	For each ROI, clears around ROI then crops image and saves to a new image with same root filename + ROI name
+ *   Steps: Preparation:
+ *   	1. Open original image (directly or via Import->Bioformats - ensure "Split channels" is checked)
+ *      2. Select required image (if multiple channels)
+ *      3. Draw ROIs and add to ROI manager (T opens the ROI manager then click Add)
+ *      4. Rename ROIs to make clear which selection is which (eg RIGHT for right hippocampus) using "Rename" in ROI Manager
+ *      5. Save ROIs (select all first then under More>> Save) as same filename and "_ROIset.zip"
+ *      
+ *      Run this macro (recommend a freshly opened ImageJ):
+ *      	1. Select the input directory (should only contain original images and ROI zip files)
+ *      	2. Select the output directory
+ *      	3. Batch Processing will run as
+ *          	a. For each ROI, clears around ROI then crops image and saves to a new image with same root filename + ROI name
+ *          	b. Analysis of area, perimeter of each ROI
+ *          	c. Processing of each image to detect number of dark stained neurons 
+ *          		- note, this is problematic with low contrast images and may give false positives, particularly with wild type - manual count to check
+ *          	d. Results are compiled and written to a csv file
  *          
  *          
  *   	
@@ -178,6 +188,7 @@ function createSummary(basefilename){
 function findDABcount(tiff){
 	print("Processing ROI:" + tiff);
 	//Enhance image
+	run("Subtract Background...", "rolling=50 light");
 	run("Median...", "radius=2");
 	run("Brightness/Contrast...");
 	run("Enhance Contrast", "saturated=0.35"); //NOTE: This enhances contrast amongst provided pixel data - it may give false DAB+ve
@@ -186,10 +197,12 @@ function findDABcount(tiff){
 	setAutoThreshold("RenyiEntropy dark");
 	setThreshold(0, 18);
 	run("Convert to Mask");
-	run("Options...", "iterations=20 count=5 pad do=Close");
+	run("Despeckle");
+	run("Close-");
+	//run("Options...", "iterations=20 count=5 pad do=Close");
 	//Detect labeled neurons
 	run("Watershed");
-	run("Analyze Particles...", "size=30-Infinity circularity=0.20-1.00 show=[Overlay Masks] display exclude clear include summarize in_situ");
+	run("Analyze Particles...", "size=30-Infinity circularity=0.05-1.00 show=[Overlay Masks] display exclude clear include summarize in_situ");
 	updateResults();
 	//save mask? 
 	print("DAB Results saved");//:" + getResultLabel() + "=" + getResult("Count"));
