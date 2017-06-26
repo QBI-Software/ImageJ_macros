@@ -88,7 +88,6 @@ function processCurrentImage(outputdir){
 	print("Directory:", dir);
 	print("Title:", title);
 	roifile = dir + basename + "_ROIset.zip";
-	roiManager("open", roifile);
 	print("ROIfile" + roifile);
 	n = roiManager("count");
 	print("ROImanager: " + n);
