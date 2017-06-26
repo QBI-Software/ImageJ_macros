@@ -49,7 +49,7 @@ for(j=0;j<filelist.length;j++){
 			showProgress(j+1, filelist.length);	
 			//If normal tiff file - use this: open(dir1 + filelist[j]);
 			//If tiled tiff file  - use Bioformats
-			run("Bio-Formats", "open=[" + inputfile + "] color_mode=Default group_files split_channels open_files view=Hyperstack stack_order=XYCZT use_virtual_stack contains=[] name=[" + inputfile + "]");
+			run("Bio-Formats", "open=[" + inputfile + "] color_mode=Default split_channels open_files view=Hyperstack stack_order=XYCZT use_virtual_stack contains=[] name=[" + inputfile + "]");
 			//?pause
 			//Config settings
 			setOption("BlackBackground", false);
