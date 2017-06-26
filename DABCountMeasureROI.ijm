@@ -77,12 +77,19 @@ function processCurrentImage(outputdir){
 	}
 	name = getInfo("image.filename"); 
 	title = getTitle(); 
-	exti = indexOf(name,'.tif');
+	if (indexOf(name, ".ome.tif")> 0){
+		exti = indexOf(name,'.ome.tif');
+	}else{
+		exti = indexOf(name,'.tif');
+	}
+	
 	basename = substring(name, 0, exti);
 	print("Name:", name);
 	print("Directory:", dir);
 	print("Title:", title);
 	roifile = dir + basename + "_ROIset.zip";
+	roiManager("open", roifile);
+	print("ROIfile" + roifile);
 	n = roiManager("count");
 	print("ROImanager: " + n);
 	if (!File.exists(roifile) && n > 0){
@@ -90,6 +97,7 @@ function processCurrentImage(outputdir){
 	}else if(File.exists(roifile) && n <= 0){
 		roiManager("open", roifile);
 		n = roiManager("count");
+		print("Loaded ROI")
 	}
 	if (n <= 0){
 		print("No ROIs found for " + name);
