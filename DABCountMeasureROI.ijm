@@ -93,10 +93,18 @@ function processCurrentImage(outputdir){
 	print("ROImanager: " + n);
 	if (!File.exists(roifile) && n > 0){
 		roiManager("save", roifile);
-	}else if(File.exists(roifile) && n <= 0){
-		roiManager("open", roifile);
-		n = roiManager("count");
-		print("Loaded ROI")
+	}else if(n <= 0){
+		if (!File.exists(roifile)){
+			roifile = dir + basename + "ROIset.zip"; //without underscore
+			if (!File.exists(roifile)){
+				print("Neither ROI file found - skipping" + roifile);
+				return 0;
+			}
+			roiManager("open", roifile);
+			n = roiManager("count");
+			print("Existing ROI");
+		}
+		
 	}
 	if (n <= 0){
 		print("No ROIs found for " + name);
