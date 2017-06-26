@@ -33,7 +33,7 @@
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU General Public License for more details. 
-  */
+ */
 
 filesep = File.separator; //"/";
 dir1 = getDirectory("Choose source directory");
@@ -100,10 +100,10 @@ function processCurrentImage(outputdir){
 				print("Neither ROI file found - skipping" + roifile);
 				return 0;
 			}
-			roiManager("open", roifile);
-			n = roiManager("count");
-			print("Existing ROI");
 		}
+		roiManager("open", roifile);
+		n = roiManager("count");
+		print("Existing ROI");
 		
 	}
 	if (n <= 0){
