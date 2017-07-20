@@ -15,6 +15,7 @@
  * 3. Removed colorization of channels
  * 4. Merged single channels with autodetection of number of channels
  * 5. MOD Oct2016: Split multichannel images
+ * 6. MOD Jul2017: Reversed xy for snaketile numbering, added verbose msgs
  * (Contact: Liz Cooper-Williams, QBI e.cooperwilliams@uq.edu.au)
  */
 requires("1.51d");
@@ -27,25 +28,28 @@ suffix = "_z";
 Dialog.addString("File suffix: ", suffix, 5);
 Dialog.addCheckbox("SnakeTile numbering", 0);
 Dialog.addCheckbox("Adjust threshold", 0);
+Dialog.addCheckbox("Verbose", 0);
 Dialog.show();
 suffix = Dialog.getString();
 snt = Dialog.getCheckbox();
 print("Snaketile:" + snt);
 adjust = Dialog.getCheckbox();
 print("Adjust threshold: " + adjust);
+verbose = Dialog.getCheckbox();
+print("Verbose msgs: " + verbose);
 start=0;
 
 
-processFolder(suffix, snt, adjust, input);
+processFolder(suffix, snt, adjust, input,verbose);
 exit("Finished");
 
-function processFolder(suffix, snt, adjust, input) {
+function processFolder(suffix, snt, adjust, input,verbose) {
     print("Starting folder processing: " + input);
 	list = getFileList(input);
 	print("Total entries in directory:" + list.length);
-	multi = hasMultipleChannels(input);
+	multi = hasMultipleChannels(input,verbose);
 	if (snt){
-		snaketiles = getSnakeTileList(list);
+		snaketiles = getSnakeTileList(list,verbose);
 	}else{
 		snaketiles = newArray();
 	}
@@ -69,7 +73,7 @@ function processFolder(suffix, snt, adjust, input) {
 						print("Setting filename from: " + filename + " to " + outfilename);
 						n++;
 					}
-					processStack(input, stacklist, output, filename, outfilename, adjust, multi);
+					processStack(input, stacklist, output, filename, outfilename, adjust, multi,verbose);
 					
 					l += stacklist.length;
 					stacklist = newArray(list.length - l);
@@ -91,7 +95,7 @@ function processFolder(suffix, snt, adjust, input) {
 			outfilename = snaketiles[n];
 			print("Setting filename from: " + filename + " to " + outfilename);
 		}
-		processStack(input, stacklist, output, filename, outfilename, adjust, multi);
+		processStack(input, stacklist, output, filename, outfilename, adjust, multi,verbose);
 	}
 }
 
@@ -105,7 +109,7 @@ function getRootFilename(suffix, fname){
 	}
 	//print("Suffix:" + idx);
 	rootfname = substring(fname, 0, idx);
-	print("Base Filename:" + rootfname);
+	//print("Base Filename:" + rootfname);
 	return rootfname;
 }
 
@@ -114,35 +118,43 @@ function getRegex(){
 	return re;
 }
 
-function getFirstFile(inputdir){
+function getFirstFile(inputdir,verbose){
 	firstfile="";
 	list = getFileList(inputdir);
-	print("getFirstFile: list=" + list[0]);
+	if (verbose){
+		print("getFirstFile: list=" + list[0]);
+	}
 	re = getRegex();
 	//assumes last file has total rows, cols
 	for (i = 0; i < list.length; i++) {
 		//includes filepath
 		if (matches(list[i],re)){
 			firstfile = list[i];
-			print("First filename:" + firstfile);
+			if (verbose){
+				print("First filename:" + firstfile);
+			}
 			//idx = i;
 			i = list.length; //break
 			
 		}else{
-			print("Not matched=" + list[i]);
+			if (verbose){
+				print("Not matched=" + list[i]);
+			}
 		}
 	}
 	return firstfile;
 }
 
-function getLastFile(list){
+function getLastFile(list,verbose){
 	lastfile="";
 	re = getRegex();
 	//assumes last file has total rows, cols
 	for (i = list.length - 1; i > 0; i--) {
 		if (matches(list[i],re)){
 			lastfile = list[i];
-			print("Last filename:" + lastfile);
+			if (verbose){
+				print("Last filename:" + lastfile);
+			}
 			idx = i;
 			i = 0; //break
 			
@@ -151,13 +163,14 @@ function getLastFile(list){
 	return lastfile;
 }
 //Returns number of channels or O if not multiple
-function hasMultipleChannels(inputdir){
+function hasMultipleChannels(inputdir,verbose){
 	rtn = 0;
-	firstfile = getFirstFile(inputdir);
+	firstfile = getFirstFile(inputdir,verbose);
 	print("Multiplechannels: checkfile=" + inputdir + firstfile);
 	open(inputdir + firstfile);
 	Stack.getDimensions(width, height, channels, slices, frames);
 	print("Channels: " + channels + " Slices: " + slices + " Frames: " + frames);
+
 	if (channels > 1 || slices > 1){
 		if (channels > slices){
 			rtn = channels;
@@ -169,19 +182,19 @@ function hasMultipleChannels(inputdir){
 	return rtn;
 }
 /* Snake tile numbering
-x001_y001, x002_y001, x003_y001
-x001_y002, x002_y002, x003_y002
-x001_y003, x002_y003, x003_y003
+x001_y001, x002_y001, x003_y001, x004_y001
+x001_y002, x002_y002, x003_y002, x004_y002
+x001_y003, x002_y003, x003_y003, x004_y003
 =
-Tile001, Tile002, Tile003
-Tile006, Tile005, Tile004
-Tile007, Tile008, Tile009.
+Tile001, Tile002, Tile003, Tile004
+Tile008, Tile007, Tile006, Tile005
+Tile009, Tile010, Tile011, Tile012
 */
-function getSnakeTileList(list){
+function getSnakeTileList(list,verbose){
 	outlist = newArray();
 	x=0;
 	y=0;
-	lastfile=getLastFile(list);
+	lastfile=getLastFile(list,verbose);
 	
 	if(lengthOf(lastfile) > 0){
 		parts=split(lastfile, "_"); 
@@ -191,21 +204,23 @@ function getSnakeTileList(list){
 				x1 = parseInt(substring(parts[j], 1));
 				if (x1 > x){
 					x = x1;
-					//print("x=" + x);
+					print("x=" + x);
 				}			
 			}
 			if (startsWith(parts[j], "y")){
 				y1 = parseInt(substring(parts[j], 1));
 				if (y1 > y){
 					y = y1;
-					//print("y=" + y);
+					print("y=" + y);
 				}
 			}
 		}
+		
 		//determine number rows & columns
-		print("Rows= " + x + " Cols=" + y);
+		//reversed xy for this process
+		print("Rows= " + y + " Cols=" + x);
 		//generate numbers
-		outlist = newArray(x*y);
+		outlist = newArray(y*x);
 		odd = 0;
 		ctr=x;
 		for (k=0; k < outlist.length; k++){
@@ -221,7 +236,8 @@ function getSnakeTileList(list){
 			}
 			
 		}
-		snaketilelist= transpose(y, outlist);
+		
+		snaketilelist= transpose(x, outlist);
 		//Reorder to reflect alphanumeric sorted filenames 
 		Array.show(snaketilelist);
 	}else{
@@ -254,7 +270,7 @@ function leftPad(n, width) {
   return s;
 }
 
-def runadjustments(){
+function runadjustments(){
 	setBatchMode(true);
 	print("Stack is HyperStack: Adjusting contrast");
 	getDimensions(w, h, channels, slices, frames);
@@ -272,16 +288,19 @@ def runadjustments(){
 }
 
 //Create Hyperstack from list
-function processStack(inputdir,input, output, file, outfilename, adjust, multi) {
+function processStack(inputdir,input, output, file, outfilename, adjust, multi, verbose) {
 	/*Set output filename*/
 	if (lengthOf(outfilename) > 0){
 		outputfile = output + outfilename + ".tif";
 	}else{
 		outputfile = output + file + ".tif";
 	}
-	print("Processing: " + input.length + " files");
+	if (verbose){
+		print("Processing: " + input.length + " files");
+	}
 	if (multi > 0){
 		print("Multiple channels - using Bio-formats");
+
 		/*tile_x00<1-4>_y00<1-4>_z0<01-29>.tif*/
 		bfname = inputdir + file + "_z00<1-" + input.length + ">.tif";
 		if (input.length >=10 && input.length <=99){
@@ -293,12 +312,16 @@ function processStack(inputdir,input, output, file, outfilename, adjust, multi) 
 		/* Split channels into separate directories */
 		for (c=0; c< multi; c++) {
 			chanDir = "ch" + c;
-			print("Channeldir="+ output+chanDir);
+			if (verbose){
+				print("Channeldir="+ output+chanDir);
+			}
 			if (!File.exists(output + chanDir)){
 				File.makeDirectory(output + chanDir); 
 			}
 			imageTitle=getTitle();
-			print("Image title=" + imageTitle);
+			if (verbose){
+				print("Image title=" + imageTitle);
+			}
 			i = lastIndexOf(imageTitle,"="); 
 			rootImageTitle = substring(imageTitle, 0, i);
 			selectWindow(rootImageTitle + "="+c);
@@ -313,7 +336,9 @@ function processStack(inputdir,input, output, file, outfilename, adjust, multi) 
 		}
 	}else{
 		print("Single channels - using Image sequence");
-		print("Input:" + input[0] + " Matching: " + file);
+		if (verbose){
+			print("Input:" + input[0] + " Matching: " + file);
+		}
 		run("Image Sequence...", "open=[" + input[0] + "] file=" + file + " sort use");
 		if (adjust && Stack.isHyperStack){
 			runadjustments();
