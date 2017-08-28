@@ -93,12 +93,12 @@ for(j=0;j<filelist.length;j++){
 			//Segment cells from each channel as masks
 			selectWindow(title);
 			print("Creating masks...");
-			createMask(outputdir, blackbg);
+			roiidx = createMask(outputdir, blackbg);
 			roiManager("save", outputdir + filesep + basename + "_maskROI.zip");
 			print("Masks saved to zip");
 			//Count all cells from each channel
 			print("Counting cells from each channel...");
-			analysis(outputdir, basename+ "_RGB.tiff");
+			analysis(outputdir, basename+ "_RGB.tiff", roiidx);
 			
 			//Clear ROI manager - uncomment this if single mode
 			roiManager("reset");
@@ -221,6 +221,7 @@ function createMask(outputdir, blackbg){
 	
 	for(i=1; i<= nSlices; i++){
 		setSlice(i);
+		roiidx = newArray(4);
 		if (blackbg){
 			bg = 'Dark';
 		}else{
@@ -248,22 +249,26 @@ function createMask(outputdir, blackbg){
 		roiManager("add");
 		roiManager("Select", i-1);
 		roiManager("Rename", "mask_" + i);
+		roiManager("remove slice info")
+		roiidx[i-1]=roiManager("index");
 		
 	}
 	//Create combined mask with channels 1 and 3
 	roiManager("Select", newArray(0,2));
 	roiManager("AND");
 	roiManager("Add");
-	roiManager("Rename", "RBcombined_mask");
+	roiManager("Rename", "RBcombined");
+	roiidx[i-1]=roiManager("index");
 	roiManager("Deselect");
 	//selectWindow(getTitle());
 	//run("Create Selection");
 	//saveAs("TIFF", outputdir + File.separator + "mask.tiff");
-	
+	print("ROI idx: ", join(roiidx,","));
+	return roiidx;
 }
 
 //Analyse RGB image created above with masks - TODO sort this out
-function analysis(outputdir,basename){
+function analysis(outputdir,basename, roiidx){
 	print("Analysing ...");
 	selectWindow(basename);
 	run("RGB Stack");
@@ -271,7 +276,7 @@ function analysis(outputdir,basename){
 	//Get counts and areas for each slice - Summary table
 	for(i=1; i<= nSlices; i++){
 		setSlice(i);		
-		roiManager("Select",i);
+		roiManager("Select",roiidx[i-1]);
 		setAutoThreshold("Otsu dark");
 		run("Analyze Particles...", "size=50-Infinity circularity=0.20-1.00 show=[Overlay Masks] exclude include summarize in_situ slice");
 
