@@ -74,15 +74,11 @@ for(j=0;j<filelist.length;j++){
 			//get Image refs
 			title = getTitle();
 			basename = File.nameWithoutExtension;
-			print("***Image opened: ", title);
-			if (adjustbg == true){
-				print("Adjusting Background");
-				adjustBackground(outputdir);
-			}		
+			print("***Image opened: ", title);	
 			
 			//Extract ROIs
 			print("Extracting ROIs");
-			extractROIImages(outputdir, blackbg, roiset);
+			extractROIImages(outputdir, blackbg, roiset, adjustbg);
 
 			//Clean up windows
 			run("Close All"); 
@@ -96,7 +92,7 @@ print("\n***********************\nProgram finished\n***********************");
 
 
 /****** FUNCTIONS ******/
-function adjustBackground(outputdir){
+function adjustBackground(){
 	//Check for multi-channel
 	Stack.getDimensions(width, height, channels, slices, frames);
 	print("Channels: " + channels + " Slices: " + slices + " Frames: " + frames);
@@ -119,7 +115,7 @@ function adjustBackground(outputdir){
 
 
 
-function extractROIImages(outputdir, blackbg, roiset){
+function extractROIImages(outputdir, blackbg, roiset, adjustbg){
 	dir = getInfo("image.directory"); //getDirectory("image");
 	if (lengthOf(outputdir) <=0){
 		outputdir = dir;
@@ -175,7 +171,11 @@ function extractROIImages(outputdir, blackbg, roiset){
 		roiname = basename + "_"+seln+".tif";
 		tiff = outputdir + filesep + roiname;
 		print("running auto crop...");
-		run("Auto Crop");	
+		run("Auto Crop");
+		if (adjustbg == true){
+			print("Adjusting Background");
+			adjustBackground();
+		}	
 		roiManager("Select", i);
 		roiManager("measure");
 		saveAs("Tiff", tiff);
