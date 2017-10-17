@@ -29,6 +29,7 @@ Dialog.addString("File suffix: ", suffix, 5);
 Dialog.addCheckbox("SnakeTile numbering", 0);
 Dialog.addCheckbox("Adjust threshold", 0);
 Dialog.addCheckbox("Verbose", 0);
+Dialog.addCheckbox("Single directory output", 0);
 Dialog.show();
 suffix = Dialog.getString();
 snt = Dialog.getCheckbox();
@@ -37,6 +38,8 @@ adjust = Dialog.getCheckbox();
 print("Adjust threshold: " + adjust);
 verbose = Dialog.getCheckbox();
 print("Verbose msgs: " + verbose);
+singledir = Dialog.getCheckbox();
+print("Single output directory: " + singledir);
 start=0;
 
 
@@ -73,7 +76,7 @@ function processFolder(suffix, snt, adjust, input,verbose) {
 						print("Setting filename from: " + filename + " to " + outfilename);
 						n++;
 					}
-					processStack(input, stacklist, output, filename, outfilename, adjust, multi,verbose);
+					processStack(input, stacklist, output, filename, outfilename, adjust, multi,verbose, singledir);
 					
 					l += stacklist.length;
 					stacklist = newArray(list.length - l);
@@ -95,7 +98,7 @@ function processFolder(suffix, snt, adjust, input,verbose) {
 			outfilename = snaketiles[n];
 			print("Setting filename from: " + filename + " to " + outfilename);
 		}
-		processStack(input, stacklist, output, filename, outfilename, adjust, multi,verbose);
+		processStack(input, stacklist, output, filename, outfilename, adjust, multi,verbose, singledir);
 	}
 }
 
@@ -288,7 +291,7 @@ function runadjustments(){
 }
 
 //Create Hyperstack from list
-function processStack(inputdir,input, output, file, outfilename, adjust, multi, verbose) {
+function processStack(inputdir,input, output, file, outfilename, adjust, multi, verbose, singledir) {
 	/*Set output filename*/
 	if (lengthOf(outfilename) > 0){
 		outputfile = output + outfilename + ".tif";
@@ -309,30 +312,55 @@ function processStack(inputdir,input, output, file, outfilename, adjust, multi, 
 			bfname = inputdir + file + "_z<001-" + input.length + ">.tif";
 		}
 		run("Bio-Formats", "open=[" + input[0] + "] color_mode=Default group_files split_channels open_files view=Hyperstack stack_order=XYCZT swap_dimensions use_virtual_stack axis_1_number_of_images=" + input.length + " axis_1_axis_first_image=1 axis_1_axis_increment=1 z_1=" + input.length + " c_1="+multi+" t_1=1 contains=[" + file + "] name=[" + bfname + "]");
-		/* Split channels into separate directories */
-		for (c=0; c< multi; c++) {
-			chanDir = "ch" + c;
-			if (verbose){
-				print("Channeldir="+ output+chanDir);
+		if (singledir){
+			for (c=0; c< multi; c++) {
+				chanDir = "C" + c + "_";
+				if (verbose){
+					print("Channel=" + chanDir);
+				}
+				
+				imageTitle=getTitle();
+				if (verbose){
+					print("Image title=" + imageTitle);
+				}
+				i = lastIndexOf(imageTitle,"="); 
+				rootImageTitle = substring(imageTitle, 0, i);
+				selectWindow(rootImageTitle + "="+c);
+				outputfile = output + File.separator + chanDir + outfilename + ".tif";
+				if (adjust && Stack.isHyperStack){
+					runadjustments();
+				}
+				saveAs("tiff", outputfile);
+				close();
+				print("Saved to: " + outputfile);
+	
 			}
-			if (!File.exists(output + chanDir)){
-				File.makeDirectory(output + chanDir); 
+		}else{
+			/* Split channels into separate directories */	
+			for (c=0; c< multi; c++) {
+				chanDir = "ch" + c;
+				if (verbose){
+					print("Channeldir="+ output+chanDir);
+				}
+				if (!File.exists(output + chanDir)){
+					File.makeDirectory(output + chanDir); 
+				}
+				imageTitle=getTitle();
+				if (verbose){
+					print("Image title=" + imageTitle);
+				}
+				i = lastIndexOf(imageTitle,"="); 
+				rootImageTitle = substring(imageTitle, 0, i);
+				selectWindow(rootImageTitle + "="+c);
+				outputfile = output + chanDir + File.separator + outfilename + ".tif";
+				if (adjust && Stack.isHyperStack){
+					runadjustments();
+				}
+				saveAs("tiff", outputfile);
+				close();
+				print("Saved to: " + outputfile);
+	
 			}
-			imageTitle=getTitle();
-			if (verbose){
-				print("Image title=" + imageTitle);
-			}
-			i = lastIndexOf(imageTitle,"="); 
-			rootImageTitle = substring(imageTitle, 0, i);
-			selectWindow(rootImageTitle + "="+c);
-			outputfile = output + chanDir + File.separator + outfilename + ".tif";
-			if (adjust && Stack.isHyperStack){
-				runadjustments();
-			}
-			saveAs("tiff", outputfile);
-			close();
-			print("Saved to: " + outputfile);
-
 		}
 	}else{
 		print("Single channels - using Image sequence");
