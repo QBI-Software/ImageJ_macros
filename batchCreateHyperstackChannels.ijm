@@ -1,4 +1,5 @@
-/* Title: batchCreateHyperstackChannels
+/*
+ Title: batchCreateHyperstackChannels
  * Macro to process multiple sequences of images in a directory into hyperstacks grouped by matching filename 
  * Modified for use with multiple channels - note that in the test data, the order was initially incorrect - this may not always be the case.
  * Usage Steps:
@@ -16,9 +17,11 @@
  * 4. Merged single channels with autodetection of number of channels
  * 5. MOD Oct2016: Split multichannel images
  * 6. MOD Jul2017: Reversed xy for snaketile numbering, added verbose msgs
+ * 7. MOD Oct2017: Option to output to single directory
  * (Contact: Liz Cooper-Williams, QBI e.cooperwilliams@uq.edu.au)
  */
-requires("1.51d");
+
+requires("1.51d");
 
 input = getDirectory("Input directory");
 output = getDirectory("Output directory");
@@ -82,7 +85,8 @@ function processFolder(suffix, snt, adjust, input,verbose) {
 					stacklist = newArray(list.length - l);
 				}
 				filename = getRootFilename(suffix, list[i]);
-				j = 0;				
+				j = 0;
+				
 				stacklist[j]= input + list[i];
 			}
 			//showProgress(i, list.length);
@@ -184,7 +188,8 @@ function hasMultipleChannels(inputdir,verbose){
 	close();
 	return rtn;
 }
-/* Snake tile numbering
+
+/* Snake tile numbering
 x001_y001, x002_y001, x003_y001, x004_y001
 x001_y002, x002_y002, x003_y002, x004_y002
 x001_y003, x002_y003, x003_y003, x004_y003
