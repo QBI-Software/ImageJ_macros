@@ -50,7 +50,7 @@ start=0;
 
 if (toplevel){
 	print("Top level directory");
-	dirlist = getFileList(toplevel);
+	dirlist = getFileList(input);
 	for (i=0; i < dirlist.length; i++){
 		if (File.isDirectory(input + dirlist[i])){
 			print("Processing directory:" + input + dirlist[i]);
