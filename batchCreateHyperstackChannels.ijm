@@ -26,6 +26,7 @@ requires("1.51d");
 input = getDirectory("Input directory");
 output = getDirectory("Output directory");
 
+
 Dialog.create("Base filename ends at");
 suffix = "_z";
 Dialog.addString("File suffix: ", suffix, 5);
@@ -33,6 +34,7 @@ Dialog.addCheckbox("SnakeTile numbering", 0);
 Dialog.addCheckbox("Adjust threshold", 0);
 Dialog.addCheckbox("Verbose", 0);
 Dialog.addCheckbox("Single directory output", 0);
+Dialog.addCheckbox("Top level directory",0);
 Dialog.show();
 suffix = Dialog.getString();
 snt = Dialog.getCheckbox();
@@ -43,10 +45,23 @@ verbose = Dialog.getCheckbox();
 print("Verbose msgs: " + verbose);
 singledir = Dialog.getCheckbox();
 print("Single output directory: " + singledir);
+toplevel = Dialog.getCheckbox();
 start=0;
 
+if (toplevel){
+	print("Top level directory");
+	dirlist = getFileList(toplevel);
+	for (i=0; i < dirlist.length; i++){
+		if (File.isDirectory(input + dirlist[i])){
+			print("Processing directory:" + input + dirlist[i]);
+			processFolder(suffix, snt, adjust, input + dirlist[i],verbose);
+		}
 
-processFolder(suffix, snt, adjust, input,verbose);
+	}
+	
+}else{
+	processFolder(suffix, snt, adjust, input,verbose);
+}
 exit("Finished");
 
 function processFolder(suffix, snt, adjust, input,verbose) {
@@ -92,6 +107,7 @@ function processFolder(suffix, snt, adjust, input,verbose) {
 			//showProgress(i, list.length);
 		}else{
 			//print("File is directory");
+			
 		}
 	}
 	//last one
