@@ -23,8 +23,8 @@
 
 requires("1.51d");
 
-input = getDirectory("Input directory");
-output = getDirectory("Output directory");
+input0 = getDirectory("Input directory");
+output0 = getDirectory("Output directory");
 
 
 Dialog.create("Base filename ends at");
@@ -50,21 +50,27 @@ start=0;
 
 if (toplevel){
 	print("Top level directory");
-	dirlist = getFileList(input);
+	dirlist = getFileList(input0);
 	for (i=0; i < dirlist.length; i++){
-		if (File.isDirectory(input + dirlist[i])){
-			print("Processing directory:" + input + dirlist[i]);
-			processFolder(suffix, snt, adjust, input + dirlist[i],verbose);
+		if (File.isDirectory(input0 + dirlist[i])){
+			print("Processing directory:" + input0 + dirlist[i]);
+			output = output0 + dirlist[i];
+			if !File.isDirectory(output){
+				File.makeDirectory(output);
+			}
+			print("Output to:" + output);
+			processFolder(suffix, snt, adjust, input0 + dirlist[i],verbose, output);
 		}
 
 	}
 	
 }else{
-	processFolder(suffix, snt, adjust, input,verbose);
+	output = output0;
+	processFolder(suffix, snt, adjust, input0,verbose, output);
 }
 exit("Finished");
 
-function processFolder(suffix, snt, adjust, input,verbose) {
+function processFolder(suffix, snt, adjust, input,verbose, output) {
     print("Starting folder processing: " + input);
 	list = getFileList(input);
 	print("Total entries in directory:" + list.length);
