@@ -55,7 +55,7 @@ start=0;
 		if (File.isDirectory(input0 + dirlist[i])){
 			print("Processing directory:" + input0 + dirlist[i]);
 			output = output0 + dirlist[i];
-			if !File.isDirectory(output){
+			if (!File.isDirectory(output)){
 				File.makeDirectory(output);
 			}
 			print("Output to:" + output);
