@@ -1,5 +1,5 @@
-/*  batchROIColocalization
- *   This macro extracts one or more ROIs from an image (optional), analyses colocalisation between 3 channels and saves results and images as output
+/*  batchROIExtraction
+ *   This macro extracts one or more ROIs from an image in TIF or OME.TIF format including 3 channels and saves results and images as output
  *   Developed for QBI
  *   
  *   Steps: Preparation:
@@ -16,6 +16,7 @@
  *			4. Batch Processing will run as
  *          	a. For each ROI, clears around ROI then crops image and saves to a new image with same root filename + ROI name
  *          	b. Analysis of area, perimeter of each ROI  (as set by Set Measurements)
+ *          	c. (Option) If overlay is checked, an image with the ROI overlaid will also be produced
  *          5. Results 
  *          	a. Statistics are compiled and written to a csv file
  *          	b. Cropped images created per ROI with ROI name
@@ -47,11 +48,15 @@ Dialog.create("Options");
 Dialog.addString("ROI file suffix", "_ROIset.zip");
 Dialog.addCheckbox("Black background",0);
 Dialog.addCheckbox("Adjust background",0);
+Dialog.addCheckbox("Generate overlays",0);
 Dialog.show();
 roiset = Dialog.getString();
 blackbg = Dialog.getCheckbox();
-print("Black bg=" + blackbg);
 adjustbg = Dialog.getCheckbox();
+overlay = Dialog.getCheckbox();
+
+print("OPTIONS: Black bg=" + blackbg + " Adjust bg=" + adjustbg + " Overlays=" + overlay);
+
 //Config settings
 setOption("BlackBackground", blackbg);
 run("Set Measurements...", "area perimeter integrated area_fraction stack limit display add nan decimal=3");
@@ -78,7 +83,7 @@ for(j=0;j<filelist.length;j++){
 			
 			//Extract ROIs
 			print("Extracting ROIs");
-			extractROIImages(outputdir, blackbg, roiset, adjustbg);
+			extractROIImages(outputdir, blackbg, roiset, adjustbg, overlay);
 
 			//Clean up windows
 			run("Close All"); 
@@ -115,7 +120,7 @@ function adjustBackground(){
 
 
 
-function extractROIImages(outputdir, blackbg, roiset, adjustbg){
+function extractROIImages(outputdir, blackbg, roiset, adjustbg, overlay){
 	dir = getInfo("image.directory"); //getDirectory("image");
 	if (lengthOf(outputdir) <=0){
 		outputdir = dir;
@@ -133,15 +138,21 @@ function extractROIImages(outputdir, blackbg, roiset, adjustbg){
 	print("Directory: ", dir);
 	print("Title: ", title);
 	roifile = dir + basename + roiset;
+	roisingle = dir + basename + ".roi";
 	print("ROIfile: " + roifile);
 	roiManager("reset");
 	if (File.exists(roifile)){
 		roiManager("open", roifile);
 		n = roiManager("count");
 		print("ROIs loaded=" + n);
-	}
-	else{
-		print("ROI zip not detected");
+	} else if (File.exists(roisingle)){
+		roiManager("open", roifile);
+		n = roiManager("count");
+		print("Single ROI loaded=" + n);
+	} else {
+		print("ROI zip or single roi not detected - check filename match");
+		print("ROIfile: " + roifile);
+		print("ROIsingle: " + roisingle);
 		return 0;
 	}
 	run("Clear Results");	
@@ -180,6 +191,25 @@ function extractROIImages(outputdir, blackbg, roiset, adjustbg){
 		roiManager("measure");
 		saveAs("Tiff", tiff);
 		print("ROI saved:" + tiff);
+	}
+
+	//Generate Overlay Images
+	if (overlay == true){
+		selectWindow(title);
+		run("Stack to Images");
+		// Add all rois
+		setOption("ExpandableArrays", true);
+		rois = newArray;
+		for (j=0;j<n;j++){
+			rois[j] = j;
+		}
+		roiManager("Select", rois);		
+		roiManager("Set Color", "red");
+		roiManager("Set Line Width", 20);
+		run("Flatten");
+		olay = outputdir + "Overlay_" + basename + ".tif";
+		saveAs("Tiff", olay);
+		print("Overlay saved:" + olay);		
 	}
 	
 	//Save area measurements to CSV
