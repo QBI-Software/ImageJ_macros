@@ -87,6 +87,7 @@ for(j=0;j<filelist.length;j++){
 
 			//Clean up windows
 			run("Close All"); 
+			run("Collect Garbage");
 		}
 	}
 }
