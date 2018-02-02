@@ -45,7 +45,7 @@ filelist = getFileList(dir1);
 
 //create dialog options
 Dialog.create("Options");
-Dialog.addString("ROI file suffix", "_ROIset.zip");
+Dialog.addString("ROI file suffix", ".RoiSet.zip");
 Dialog.addCheckbox("Black background",0);
 Dialog.addCheckbox("Adjust background",0);
 Dialog.addCheckbox("Generate overlays",0);
@@ -71,6 +71,7 @@ for(j=0;j<filelist.length;j++){
 			showProgress(j+1, filelist.length);	
 			//If normal tiff file - use this: open(dir1 + filelist[j]);
 			//If tiled tiff file  - use Bioformats
+			print("OPENING: " + filelist[j]);
 			if (endsWith(filelist[j], ".ome.tif")){
 				run("Bio-Formats", "open=[" + inputfile + "] color_mode=Default split_channels open_files view=Hyperstack stack_order=XYCZT use_virtual_stack contains=[] name=[" + inputfile + "]");
 			}else{
@@ -139,7 +140,7 @@ function extractROIImages(outputdir, blackbg, roiset, adjustbg, overlay){
 	print("Directory: ", dir);
 	print("Title: ", title);
 	roifile = dir + basename + roiset;
-	roisingle = dir + basename + ".roi";
+	roisingle = dir + basename + ".RoiSet.roi";
 	print("ROIfile: " + roifile);
 	roiManager("reset");
 	if (File.exists(roifile)){
