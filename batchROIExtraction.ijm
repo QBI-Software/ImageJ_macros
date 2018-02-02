@@ -142,13 +142,14 @@ function extractROIImages(outputdir, blackbg, roiset, adjustbg, overlay){
 	roifile = dir + basename + roiset;
 	roisingle = dir + basename + ".RoiSet.roi";
 	print("ROIfile: " + roifile);
+	print("ROIsingle: " + roisingle);
 	roiManager("reset");
 	if (File.exists(roifile)){
 		roiManager("open", roifile);
 		n = roiManager("count");
 		print("ROIs loaded=" + n);
 	} else if (File.exists(roisingle)){
-		roiManager("open", roifile);
+		roiManager("open", roisingle);
 		n = roiManager("count");
 		print("Single ROI loaded=" + n);
 	} else {
