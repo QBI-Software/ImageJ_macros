@@ -153,9 +153,7 @@ function extractROIImages(outputdir, blackbg, roiset, adjustbg, overlay){
 		n = roiManager("count");
 		print("Single ROI loaded=" + n);
 	} else {
-		print("ROI zip or single roi not detected - check filename match");
-		print("ROIfile: " + roifile);
-		print("ROIsingle: " + roisingle);
+		print("ROI zip or single roi not detected - check filenames match");
 		return 0;
 	}
 	run("Clear Results");	
