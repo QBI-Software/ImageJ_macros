@@ -221,6 +221,7 @@ function extractROIImages(outputdir, blackbg, roiset, adjustbg, overlay){
 	IJ.renameResults(nameOfSummaryTable);
 	selectWindow(nameOfSummaryTable);
 	saveAs("Text", outputdir + filesep + basename + "_" + nameOfSummaryTable + ".csv");
+	close(nameOfSummaryTable);
 	//Clear ROI manager - uncomment this if single mode
 	roiManager("reset");
 }
