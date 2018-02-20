@@ -182,15 +182,18 @@ function extractROIImages(outputdir, blackbg, roiset, adjustbg, overlay){
 		print("Selection:", seln);
 		roiname = basename + "_"+seln+".tif";
 		tiff = outputdir + filesep + roiname;
-		print("running auto crop...");
-		run("Auto Crop");
+		print("running crop...");
+		run("Crop");
 		if (adjustbg == true){
 			print("Adjusting Background");
 			adjustBackground();
 		}	
 		roiManager("Select", i);
 		roiManager("measure");
+		//Save ROI as separate image
+		//run("Stack to Hyperstack...", "order=xyczt(default) channels=" + channels +" slices=" + slices + " frames=" + frames + " display=Grayscale");
 		saveAs("Tiff", tiff);
+		//run("OME-TIFF...", "save='" + tiff + "' compression=Uncompressed");
 		print("ROI saved:" + tiff);
 	}
 
